@@ -1,8 +1,8 @@
 
 
-# Q-STOCK BOT - Streamlit App
+# Postgreschat - Streamlit App
 
-Q-STOCK BOT is a chatbot application designed to assist users with stock-related queries. It utilizes advanced language models to provide insights and recommendations based on user input.
+Postgres chat BOT is a chatbot application designed to assist users with queries. It utilizes advanced language models to provide insights and recommendations based on user input.
 
 ![App Screenshot](link_to_screenshot_image) 
 
