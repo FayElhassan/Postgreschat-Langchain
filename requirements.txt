@@ -1,0 +1,6 @@
+streamlit
+sqlalchemy
+psycopg2
+dotenv
+langchain
+
