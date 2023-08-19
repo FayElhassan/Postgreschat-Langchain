@@ -4,9 +4,7 @@
 
 Postgres chat BOT is a chatbot application designed to assist users with queries. It utilizes advanced language models to provide insights and recommendations based on user input.
 
-![App Screenshot](link_to_screenshot_image) 
 
-(Replace `link_to_screenshot_image` with an actual link to a screenshot of your app if available)
 
 ## Features
 - Interactive chat interface.
