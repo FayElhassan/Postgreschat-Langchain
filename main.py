@@ -54,28 +54,35 @@ def chat_interface():
     user_input = st.text_input("You: ", "")
 
     # Wait for user's input
-    if user_input:
+     if user_input:
         if user_input.lower() == 'exit':
             st.write("Goodbye!")
         else:
-            agent_executor = agent_factory()  # Assuming you've set up agent_factory from your previous code
-            result = agent_executor.run(user_input)
-
-            # Determine the type of response message based on user query
-            if any(word in user_input.lower() for word in ["what", "where", "how", "when"]):
-                response_msg = "Based on your query, here's the response:\n"
-            else:
-                response_msg = "Here's the information you requested:\n"
-
-            if not result:  # If there's no result, adjust the response message
-                response_msg = "Sorry, I couldn't find any answer based on your query."
-            else:
-                response_msg += result  # Append the result to the response message
+            try:
+                agent_executor = agent_factory()
+                result = agent_executor.run(user_input)
                 
-            # Update the chat history
-            history.append("user", user_input)
-            history.append("assistant", response_msg)
+                # Determine the type of response message based on user query
+                if any(word in user_input.lower() for word in ["what", "where", "how", "when"]):
+                    response_msg = "Based on your query, here's the response:\n"
+                else:
+                    response_msg = "Here's the information you requested:\n"
+
+                if not result:  # If there's no result, adjust the response message
+                    response_msg = "Sorry, I couldn't find any answer based on your query."
+                else:
+                    response_msg += result  # Append the result to the response message
+                
+                # Update the chat history
+                history.append("user", user_input)
+                history.append("assistant", response_msg)
             
+            except Exception as e:  # You can catch specific exceptions if known
+                response_msg = "Sorry, there seems to be an issue. Please try again later."
+                st.write(response_msg)
+                # Optionally, log the error for debugging
+                # logger.error(f"Error encountered: {str(e)}")
+
             with response_container:
                 # Display the chat messages excluding the initial greeting
                 for i in range(1, len(st.session_state["assistant"])):
