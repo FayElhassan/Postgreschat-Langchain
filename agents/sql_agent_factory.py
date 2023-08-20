@@ -111,15 +111,15 @@ def init_sql_db_toolkit() -> ExtendedSQLDatabaseToolkit:
     db = sql_db_factory()
     toolkit = ExtendedSQLDatabaseToolkit(db=db, llm=cfg.llm)
     return toolkit
-def initialize_agent(toolkit: SQLDatabaseToolkit) -> AgentExecutor:
-    agent_executor = create_sql_agent(
-        llm=cfg.llm,
-        toolkit=toolkit,
-        verbose=True,
-        agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-        memory=setup_memory(),
-    )
-    return agent_executor
+# def initialize_agent(toolkit: SQLDatabaseToolkit) -> AgentExecutor:
+#     agent_executor = create_sql_agent(
+#         llm=cfg.llm,
+#         toolkit=toolkit,
+#         verbose=True,
+#         agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+#         memory=setup_memory(),
+#     )
+    # return agent_executor
 def agent_factory() -> AgentExecutor:
     sql_db_toolkit = init_sql_db_toolkit()
     agent_executor = create_sql_agent(
