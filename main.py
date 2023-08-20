@@ -54,7 +54,7 @@ def chat_interface():
     user_input = st.text_input("You: ", "")
 
     # Wait for user's input
-     if user_input:
+    if user_input:
         if user_input.lower() == 'exit':
             st.write("Goodbye!")
         else:
