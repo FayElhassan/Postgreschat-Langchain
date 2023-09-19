@@ -23,14 +23,20 @@ from langchain.prompts.chat import MessagesPlaceholder
 from langchain.agents.agent import AgentOutputParser
 from langchain.schema import AgentAction, AgentFinish, OutputParserException
 from langchain.agents.mrkl.prompt import FORMAT_INSTRUCTIONS
-
+from tools.sql_tool import DatabaseSchema
 from typing import Union
 import re
+from config.settings import SQL_PREFIX, SQL_SUFFIX
 
 from config.settings import cfg
 #from sql_analyzer.log_init import logger
 from tools.sql_tool import ExtendedSQLDatabaseToolkit
 from tools.sql_database_toolkit import sql_db_factory
+import logging
+
+# Setting up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 FINAL_ANSWER_ACTION = "Final Answer:"
 
@@ -111,29 +117,51 @@ def init_sql_db_toolkit() -> ExtendedSQLDatabaseToolkit:
     db = sql_db_factory()
     toolkit = ExtendedSQLDatabaseToolkit(db=db, llm=cfg.llm)
     return toolkit
-# def initialize_agent(toolkit: SQLDatabaseToolkit) -> AgentExecutor:
-#     agent_executor = create_sql_agent(
-#         llm=cfg.llm,
-#         toolkit=toolkit,
-#         verbose=True,
-#         agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-#         memory=setup_memory(),
-#     )
-    # return agent_executor
+
 def agent_factory() -> AgentExecutor:
-    sql_db_toolkit = init_sql_db_toolkit()
-    agent_executor = create_sql_agent(
-        llm=cfg.llm,
-        toolkit=sql_db_toolkit,
-        verbose=True,
-        agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-        memory=setup_memory(),
-    )
-    agent = agent_executor.agent
-    agent.output_parser = ExtendedMRKLOutputParser()
-    return agent_executor
+    try:
+        sql_db_toolkit = init_sql_db_toolkit()
+
+        # Initialize your custom schema
+        db_schema = DatabaseSchema()
+
+        # Pass the schema to the toolkit
+        sql_db_toolkit = ExtendedSQLDatabaseToolkit(
+            db=sql_db_toolkit.db,
+            llm=sql_db_toolkit.llm,
+            schema=db_schema,  # Pass the schema here
+        )
+        
+        prompt = f"{SQL_PREFIX}\n{input}\n{SQL_SUFFIX}"
+        
+        agent_executor = create_sql_agent(
+            llm=cfg.llm,
+            toolkit=sql_db_toolkit,
+            verbose=True,
+            agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+            memory=setup_memory(),
+            prompt=prompt  # Here, we pass the modified prompt
+        )
+        
+        agent = agent_executor.agent
+        agent.output_parser = ExtendedMRKLOutputParser()
+        return agent_executor
+        
+    except Exception as e:
+        error_message = str(e)
+        if "no such table" in error_message:
+            logger.error("The specified table doesn't exist in the database.")
+        elif "no such column" in error_message:
+            logger.error("The specified column doesn't exist in the table.")
+        else:
+            logger.error(f"Error while setting up the agent: {e}")
+        raise
+
+
 
 if __name__ == "__main__":
-    agent_executor = agent_factory()
-    result = agent_executor.run("Describe all tables")
-    #logger.info("Result: %s", result)
+    try:
+        agent_executor = agent_factory()
+        result = agent_executor.run("Describe all tables")
+    except Exception as e:
+        logger.error(f"Error while executing the agent: {e}")
