@@ -1,8 +1,30 @@
+
+# SQL_PREFIX and SQL_SUFFIX for structuring the prompt for the OpenAI agent
+SQL_PREFIX = """
+You are an agent designed to interact with a SQL database. Given an input question, create a syntactically correct {dialect} query. 
+- If a table or column name contains spaces, wrap it in double quotes. For example: "SELECT * FROM \"Sales orders\" WHERE \"Order ID\" = 5".
+- Always limit your query to at most {top_k} results using the LIMIT clause.
+- Order the results by a relevant column to return the most interesting examples.
+- Never query for all columns from a table. Ask only for the relevant columns given the question.
+- If you encounter a "no such table" error, rewrite your query by placing the table in quotes.
+- Avoid using a column name that doesn't exist in the table.
+- You have tools to interact with the database. Use only the specified tools and rely solely on the information they provide to construct your answer.
+- Double-check your query before executing. If you get an error, rewrite your query and try again. Do not attempt more than three times.
+- Do not execute any DML statements (INSERT, UPDATE, DELETE, DROP, etc.).
+- If the question seems unrelated to the database, simply reply with "I don't know".
+- If unable to determine an answer, provide the best possible response after a maximum of three attempts.
+"""
+
+SQL_SUFFIX = "Begin!"
+
+Question: {input}
+thought = "I should look at the tables in the database to see what I can query."
+#some_string = f"The value is: {agent_scratchpad}"
+
 import os
 from dotenv import load_dotenv
 from langchain.chat_models import ChatOpenAI
-#from sql_analyzer.log_init import logger  # Uncomment this if you want to use the logger from sql_analyzer
-
+#from agents.sql_agent_factory import ExtendedMRKLOutputParser
 load_dotenv()
 
 POSTGRESQL = "postgresql"
@@ -16,26 +38,20 @@ class PostgresConfig:
     database = os.getenv("POSTGRES_DATABASE", "postgres")
     port = os.getenv("POSTGRES_PORT", "5432")
 
-
 class Config:
     model = "gpt-3.5-turbo-16k-0613"  # You can adjust the model name as per your requirements
     llm = ChatOpenAI(model=model, temperature=0, openai_api_key="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")
-    
-    db_connection_string = os.getenv("DB_CONNECTION_STRING", 
-                                     f"postgresql+psycopg2://{PostgresConfig.user}:{PostgresConfig.password}@{PostgresConfig.host}:{PostgresConfig.port}/{PostgresConfig.database}")
-    
+    db_connection_string = (
+        f"postgresql+psycopg2://"
+        f"{PostgresConfig.user}:"
+        f"{PostgresConfig.password}@"
+        f"{PostgresConfig.host}:"
+        f"{PostgresConfig.port}/"
+        f"{PostgresConfig.database}"
+    )
     postgres_config = PostgresConfig()
     selected_db = os.getenv("SELECTED_DB", POSTGRESQL)
+    #output_parser = ExtendedMRKLOutputParser()
     
-    if selected_db not in SELECTED_DBS:
-        raise Exception(
-            f"Selected DB {selected_db} not recognized. The possible values are: {SELECTED_DBS}."
-        )
-
 
 cfg = Config()
-
-#if __name__ == "__main__":
-    # logger.info("LLM %s", cfg.llm)  # Uncomment this if you want to use the logger from sql_analyzer
-    # logger.info("db_uri %s", cfg.db_connection_string)  # Uncomment this if you want to use the logger from sql_analyzer
-    # logger.info("selected_db %s", cfg.selected_db)  # Uncomment this if you want to use the logger from sql_analyzer
