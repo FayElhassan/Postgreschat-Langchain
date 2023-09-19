@@ -9,7 +9,25 @@ from langchain.callbacks.manager import (
 from typing import Optional, List, Any
 from json import dumps
 
+class DatabaseSchema:
+    def __init__(self):
+        # Define tables and their respective columns
+        # (I'm assuming placeholder columns for now; replace with your actual columns.)
+        self.tables = {
+            "Product": ["id", "part_number"],
+            "Sales_orders": ["id", "company_id", "created"],
+            "Sales_orders_item": ["sales_order_id", "product_id", "quantity", "unit_price", "unit_cost"],
+            "Purchase_orders": ["id", "company_id", "created"],
+            "Purchase_orders_item": ["purchase_order_id", "product_id", "quantity", "unit_price"],
+            "Platform": ["company_id", "product_id", "price"],
+            "Live_stock": ["product_id", "company_id", "quantity", "platform_cost", "sales_price"]
+        }
 
+    def get_tables(self):
+        return list(self.tables.keys())
+
+    def get_columns(self, table_name):
+        return self.tables.get(table_name, [])
 class ListViewSQLDatabaseTool(BaseSQLDatabaseTool, BaseTool):
     """Tool for getting view names."""
 
