@@ -53,6 +53,7 @@ def chat_interface():
     # Display the prompt form
     user_input = st.text_input("You: ", "")
 
+
     # Wait for user's input
     try:
         if user_input:
