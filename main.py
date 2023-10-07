@@ -59,6 +59,7 @@ def chat_interface():
         if user_input:
             if user_input.lower() == 'exit':
                 st.write("Goodbye!")
+            
             else:
                 agent_executor = agent_factory()  # Assuming you've set up agent_factory from your previous code
                 result = agent_executor.run(user_input)
