@@ -10,24 +10,70 @@ from typing import Optional, List, Any
 from json import dumps
 
 class DatabaseSchema:
-    def __init__(self):
+    def __init__(self,db):
         # Define tables and their respective columns
-        # (I'm assuming placeholder columns for now; replace with your actual columns.)
+        self.db = db
         self.tables = {
             "Product": ["id", "part_number"],
-            "Sales_orders": ["id", "company_id", "created"],
-            "Sales_orders_item": ["sales_order_id", "product_id", "quantity", "unit_price", "unit_cost"],
-            "Purchase_orders": ["id", "company_id", "created"],
-            "Purchase_orders_item": ["purchase_order_id", "product_id", "quantity", "unit_price"],
+            "SalesOrders": ["id", "sales_order_id", "company_id", "created"],
+            "SalesOrdersItem": ["sales_order_id", "product_id", "quantity", "unit_price", "unit_cost"],
+            "PurchaseOrders": ["purchase_order_id", "company_id", "created"],
+            "PurchaseOrdersItem": ["purchase_order_id", "product_id", "quantity", "unit_price"],
             "Platform": ["company_id", "product_id", "price"],
-            "Live_stock": ["product_id", "company_id", "quantity", "platform_cost", "sales_price"]
+            "LiveStock": ["product_id", "company_id", "quantity", "platform_cost", "sales_price"]
         }
+
+        self.relationships = {
+            "SalesOrdersItem": {
+                "SalesOrders": "sales_order_id",
+                "Product": "product_id"
+            },
+            "PurchaseOrdersItem": {
+                "PurchaseOrders": "purchase_order_id",
+                "Product": "product_id"
+            },
+            "Platform": {
+                "Company": "company_id",
+                "Product": "product_id"
+            },
+            "LiveStock": {
+                "Product": "product_id",
+                "Company": "company_id"
+            }
+        }
+        # self.sample_data = {}
+        # for table in self.tables:
+        #     self.sample_data[table] = fetch_sample_data(db, table)
 
     def get_tables(self):
         return list(self.tables.keys())
 
     def get_columns(self, table_name):
         return self.tables.get(table_name, [])
+
+    def get_relationship(self, table_name):
+        return self.relationships.get(table_name, {})
+class ListViewSQLDatabaseTool(BaseSQLDatabaseTool, BaseTool):
+    """Tool for getting view names."""
+
+    name = "sql_db_list_views"
+    description = "Input is an empty string, output is a comma separated list of views in the database."
+
+    def _run(
+        self,
+        tool_input: str = "",
+        run_manager: Optional[CallbackManagerForToolRun] = None,
+    ) -> str:
+        """Get the schema for a specific view."""
+        return ", ".join(self.db._inspector.get_view_names())
+
+    async def _arun(
+        self,
+        tool_input: str = "",
+        run_manager: Optional[AsyncCallbackManagerForToolRun] = None,
+    ) -> str:
+        raise NotImplementedError("ListTablesSqlDbTool does not support async")
+
 class ListViewSQLDatabaseTool(BaseSQLDatabaseTool, BaseTool):
     """Tool for getting view names."""
 
@@ -129,6 +175,9 @@ class InfoViewSQLDatabaseTool(BaseSQLDatabaseTool, BaseTool):
 
 
 class ExtendedSQLDatabaseToolkit(SQLDatabaseToolkit):
+    # def __init__(self, db, llm, schema):
+    #     super().__init__(db, llm)
+    #     self.schema = schema
     def get_tools(self) -> List[BaseTool]:
         base_tools = super(ExtendedSQLDatabaseToolkit, self).get_tools()
         db = base_tools[0].db
@@ -136,3 +185,4 @@ class ExtendedSQLDatabaseToolkit(SQLDatabaseToolkit):
         base_tools.append(InfoViewSQLDatabaseTool(db=db))
         base_tools.append(ListIndicesSQLDatabaseTool(db=db))
         return base_tools
+   
