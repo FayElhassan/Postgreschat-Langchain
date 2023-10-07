@@ -42,66 +42,46 @@ FINAL_ANSWER_ACTION = "Final Answer:"
 
 
 class ExtendedMRKLOutputParser(AgentOutputParser):
-    def get_format_instructions(self) -> str:
+     def get_format_instructions(self) -> str:
         return FORMAT_INSTRUCTIONS
 
-    def parse(self, text: str) -> Union[AgentAction, AgentFinish]:
-        includes_answer = self.includes_final_answer(text)
+     def parse(self, text: str) -> Union[AgentAction, AgentFinish]:
+        answer_type, content = self.includes_final_answer(text)
+        
+        if content:  # Ensure content is not None before proceeding with regex
+            # Check if content matches a list-like pattern
+            pattern = r"'?(.*?)'? - ([\d,]+)"
+            matches = re.findall(pattern, content)
+            if matches:
+                structured_data = [{"description": desc.strip(), "value": val.replace(',', '').strip()} for desc, val in matches]
+                formatted_output = pd.DataFrame(structured_data).to_string()  # Convert to tabular format
+                return AgentFinish({"output": formatted_output}, text)
+
+        # Existing parsing logic for actions
         regex = (
             r"Action\s*\d*\s*:[\s]*(.*?)[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)"
         )
         action_match = re.search(regex, text, re.DOTALL)
         if action_match:
-            if includes_answer:
-                raise OutputParserException(
-                    "Parsing LLM output produced both a final answer "
-                    f"and a parse-able action: {text}"
-                )
             action = action_match.group(1).strip()
             action_input = action_match.group(2)
             tool_input = action_input.strip(" ")
-            # ensure if it's a well-formed SQL query we don't remove any trailing " chars
             if not tool_input.startswith("SELECT "):
                 tool_input = tool_input.strip('"')
-
             return AgentAction(action, tool_input, text)
-        elif includes_answer:
-            return AgentFinish(
-                {"output": text.split(FINAL_ANSWER_ACTION)[-1].strip()}, text
-            )
-        # Handle the specific scenario where the LLM returns "Action: None"
-        elif "Action: None" in text:
-            return AgentFinish({"output": "I couldn't determine an appropriate action based on the input."}, text)
-        elif not re.search(r"Action\s*\d*\s*:[\s]*(.*?)", text, re.DOTALL):
-            raise OutputParserException(
-                f"Could not parse LLM output: `{text}`",
-                observation="Invalid Format: Missing 'Action:' after 'Thought:'",
-                llm_output=text,
-                send_to_llm=True,
-            )
-        elif not re.search(
-            r"[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)", text, re.DOTALL
-        ):
-            raise OutputParserException(
-                f"Could not parse LLM output: `{text}`",
-                observation="Invalid Format:"
-                " Missing 'Action Input:' after 'Action:'",
-                llm_output=text,
-                send_to_llm=True,
-            )
-        else:
-            raise OutputParserException(f"Could not parse LLM output: `{text}`")
+        
+        # If none of the patterns are recognized, just return the text as it is
+        return AgentFinish({"output": text}, text)
 
+     def includes_final_answer(self, text):
+        # Check for any final answer pattern
+        if FINAL_ANSWER_ACTION in text:
+            return "answer", text.split(FINAL_ANSWER_ACTION)[-1].strip()
+        
+        return None, None
 
-
-    def includes_final_answer(self, text):
-        includes_answer = (
-            FINAL_ANSWER_ACTION in text or FINAL_ANSWER_ACTION.lower() in text.lower()
-        )
-        return includes_answer
-
-    @property
-    def _type(self) -> str:
+     @property
+     def _type(self) -> str:
         return "mrkl"
 
 
@@ -112,18 +92,24 @@ def setup_memory() -> Tuple[Dict, ConversationBufferMemory]:
     }
     memory = ConversationBufferMemory(memory_key="memory", return_messages=True)
     return agent_kwargs, memory
-
 def init_sql_db_toolkit() -> ExtendedSQLDatabaseToolkit:
     db = sql_db_factory()
-    toolkit = ExtendedSQLDatabaseToolkit(db=db, llm=cfg.llm)
+    db_schema = DatabaseSchema(db)  # Initialize your custom schema with the db
+    toolkit = ExtendedSQLDatabaseToolkit(db=db, llm=cfg.llm, schema=db_schema)
     return toolkit
+
+# def init_sql_db_toolkit() -> ExtendedSQLDatabaseToolkit:
+#     db = sql_db_factory()
+#     toolkit = ExtendedSQLDatabaseToolkit(db=db, llm=cfg.llm)
+#     return toolkit
 
 def agent_factory() -> AgentExecutor:
     try:
         sql_db_toolkit = init_sql_db_toolkit()
+        db = sql_db_factory()
 
         # Initialize your custom schema
-        db_schema = DatabaseSchema()
+        db_schema = DatabaseSchema(db)
 
         # Pass the schema to the toolkit
         sql_db_toolkit = ExtendedSQLDatabaseToolkit(
@@ -141,6 +127,7 @@ def agent_factory() -> AgentExecutor:
             agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
             memory=setup_memory(),
             prompt=prompt  # Here, we pass the modified prompt
+            
         )
         
         agent = agent_executor.agent
