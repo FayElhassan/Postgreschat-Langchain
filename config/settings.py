@@ -49,15 +49,15 @@ SELECTED_DBS = [POSTGRESQL]
 
 
 class PostgresConfig:
-    user = os.getenv("POSTGRES_USER", "Abdalla")
-    password = os.getenv("POSTGRES_PASSWORD", "Admin1234")
-    host = os.getenv("POSTGRES_HOST", "database-1.ccpah0etv9im.eu-north-1.rds.amazonaws.com")
-    database = os.getenv("POSTGRES_DATABASE", "postgres")
+    user = os.getenv("POSTGRES_USER", "____")
+    password = os.getenv("POSTGRES_PASSWORD", "_____")
+    host = os.getenv("POSTGRES_HOST", "------")
+    database = os.getenv("POSTGRES_DATABASE", "_____")
     port = os.getenv("POSTGRES_PORT", "5432")
 
 class Config:
     model = "gpt-3.5-turbo-16k-0613"  # You can adjust the model name as per your requirements
-    llm = ChatOpenAI(model=model, temperature=0, openai_api_key="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")
+    llm = ChatOpenAI(model=model, temperature=0, openai_api_key="_________")
     db_connection_string = (
         f"postgresql+psycopg2://"
         f"{PostgresConfig.user}:"
